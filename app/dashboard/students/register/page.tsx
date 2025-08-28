@@ -1,4 +1,4 @@
- "use client"
+"use client"
 
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
@@ -48,6 +48,7 @@ export default function StudentRegistration() {
     country: "",
     gender: "",
     assignedClass: "",
+    profilePicture: "",
 
     // Guardian Details
     guardianSurname: "",
@@ -95,6 +96,10 @@ export default function StudentRegistration() {
 
       reader.readAsDataURL(file)
     }
+  }
+
+  const handleProfilePictureUpload = (files: FileList | null) => {
+    handleFileUpload("profilePicture", files)
   }
 
   const handleNext = () => {
@@ -168,6 +173,14 @@ export default function StudentRegistration() {
         {/* Student Info */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Student Information</Text>
+          
+          {/* Profile Picture in PDF */}
+          {formData.profilePicture && (
+            <View style={styles.profilePicContainer}>
+              <Image src={formData.profilePicture} style={styles.profilePicPDF} />
+            </View>
+          )}
+          
           <View style={styles.row}>
             <Text style={styles.label}>Full Name:</Text>
             <Text>{formData.firstName} {formData.middleName} {formData.surname}</Text>
@@ -350,6 +363,16 @@ export default function StudentRegistration() {
       objectFit: 'cover',
       borderRadius: 4,
     },
+    profilePicContainer: {
+      marginBottom: 15,
+      alignItems: 'center',
+    },
+    profilePicPDF: {
+      width: 120,
+      height: 120,
+      borderRadius: 60,
+      objectFit: 'cover',
+    },
     footer: {
       marginTop: 40,
       paddingTop: 10,
@@ -363,7 +386,7 @@ export default function StudentRegistration() {
     },
   })
 
-  // --- Render Functions (same as before) ---
+  // --- Render Functions ---
   const renderPersonalDetails = () => (
     <Card>
       <CardHeader>
@@ -371,6 +394,48 @@ export default function StudentRegistration() {
         <CardDescription>Enter the student's personal information</CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
+        {/* Profile Picture Upload Section */}
+        <div className="flex flex-col items-center space-y-4 pb-6 border-b">
+          <div className="relative">
+            <div 
+              className={cn(
+                "w-40 h-40 rounded-full overflow-hidden border-4 border-gray-200 flex items-center justify-center bg-gray-100",
+                formData.profilePicture && "border-blue-500"
+              )}
+            >
+              {formData.profilePicture ? (
+                <img 
+                  src={formData.profilePicture} 
+                  alt="Profile" 
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <span className="text-gray-400 text-6xl">👤</span>
+              )}
+            </div>
+            <div className="absolute -bottom-2 -right-2">
+              <Input
+                id="profilePicture"
+                type="file"
+                accept="image/*"
+                onChange={(e) => handleProfilePictureUpload(e.target.files)}
+                className="hidden"
+              />
+              <Button
+                type="button"
+                size="icon"
+                className="rounded-full w-10 h-10"
+                onClick={() => document.getElementById('profilePicture')?.click()}
+              >
+                <Upload className="w-4 h-4" />
+              </Button>
+            </div>
+          </div>
+          <p className="text-sm text-muted-foreground text-center max-w-xs">
+            Upload a clear photo of the student. JPG, PNG or GIF. Max size 5MB.
+          </p>
+        </div>
+
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className="space-y-2">
             <Label htmlFor="surname">Surname *</Label>
@@ -628,7 +693,7 @@ export default function StudentRegistration() {
               </Button>
               {formData[doc.field as keyof typeof formData] && (
                 <span className="text-sm text-muted-foreground">
-                  {formData[doc.field as keyof typeof formData].startsWith("") 
+                  {formData[doc.field as keyof typeof formData].startsWith("data:") 
                     ? `Uploaded: ${doc.label.split(" *")[0]}` 
                     : formData[doc.field as keyof typeof formData]}
                 </span>
