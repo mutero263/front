@@ -58,6 +58,12 @@ export default function DashboardPage() {
       color: "bg-blue-500",
     },
     {
+      title: "Student List",
+      description: "Show all registered students",
+      icon: Users,
+      href: "/dashboard/students/list"
+    },
+    {
       title: "Teacher Management",
       description: "Manage teaching staff",
       icon: GraduationCap,
