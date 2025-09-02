@@ -1,106 +1,146 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { GraduationCap, User, Shield, Users, AlertCircle } from "lucide-react"
-import { useRouter } from "next/navigation"
-import { useToast } from "@/hooks/use-toast"
-import { Alert, AlertDescription } from "@/components/ui/alert"
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { GraduationCap, User, Shield, Users, AlertCircle } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useToast } from "@/hooks/use-toast";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { useEffect } from "react";
 
 export function LoginPage() {
-  const [userType, setUserType] = useState<string>("")
+  const [userType, setUserType] = useState<string>("");
   const [credentials, setCredentials] = useState({
     username: "",
     password: "",
-  })
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string>("")
-  const router = useRouter()
-  const { toast } = useToast()
+  });
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string>("");
+  const router = useRouter();
+  const { toast } = useToast();
 
-  // Demo credentials for easy testing
+  // 🔐 Demo credentials (for auto-fill only in dev mode)
   const demoCredentials = [
     { username: "admin", password: "password123", userType: "administrator", label: "Administrator" },
     { username: "accountant", password: "password123", userType: "administrator", label: "Accountant" },
     { username: "teacher1", password: "password123", userType: "teacher", label: "Teacher" },
-    { username: "student1", password: "password123", userType: "student", label: "Student" },
+    { username: "student1", password: "password123", userType: "STUDENT", label: "Student" },
     { username: "parent1", password: "password123", userType: "guardian", label: "Parent" },
-  ]
+  ];
 
-  const handleDemoLogin = (demo: any) => {
-    setCredentials({ username: demo.username, password: demo.password })
-    setUserType(demo.userType)
-  }
+  // 🌐 Check environment: show demo panel only in dev
+  const isDemoMode = process.env.NEXT_PUBLIC_APP_ENV !== "production";
 
+  // 🛠 Get API URL with fallback (critical fix)
+  const API_BASE_URL =
+    process.env.NEXT_PUBLIC_API_BASE_URL || "https://99625203ee61.ngrok-free.app";
+
+  // Auto-fill demo credentials (does NOT auto-login)
+  const handleDemoLogin = (demo: (typeof demoCredentials)[0]) => {
+    setCredentials({ username: demo.username, password: demo.password });
+    setUserType(demo.userType);
+    setError("");
+  };
+
+  // 🔑 Real login: sends data to your backend
   const handleLogin = async () => {
     if (!credentials.username || !credentials.password || !userType) {
-      setError("Please fill in all fields")
-      return
+      setError("Please fill in all fields");
+      return;
     }
 
-    setLoading(true)
-    setError("")
+    setLoading(true);
+    setError("");
 
     try {
-      // For demo purposes, simulate successful login
-      const mockResponse = {
-        data: {
-          token: "demo-jwt-token-" + Date.now(),
-          username: credentials.username,
-          email: credentials.username + "@tsms.edu",
-          userType: userType.toUpperCase(),
+      const response = await fetch(`${API_BASE_URL}/api/auth/signin`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
         },
+        body: JSON.stringify({
+          username: credentials.username,
+          password: credentials.password,
+          userType,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || "Invalid username or password.");
       }
 
-      // Store authentication data
+      // ✅ Save real session data
       if (typeof window !== "undefined") {
-        localStorage.setItem("token", mockResponse.data.token)
-        localStorage.setItem("userType", mockResponse.data.userType.toLowerCase())
-        localStorage.setItem("username", mockResponse.data.username)
-        localStorage.setItem("email", mockResponse.data.email)
+        localStorage.setItem("token", data.token);
+        localStorage.setItem("userType", data.userType);
+        localStorage.setItem("username", data.username);
+        localStorage.setItem("email", data.email || `${data.username}@tsms.edu`);
       }
 
       toast({
-        title: "Success!",
-        description: `Welcome back, ${credentials.username}!`,
-      })
+        title: "Login Successful",
+        description: `Welcome back, ${data.username}!`,
+      });
 
-      // Redirect to dashboard
-      router.push("/dashboard")
-    } catch (error: any) {
-      setError("Login failed. Please check your credentials.")
+      // 🚀 Redirect to dashboard
+      router.push("/dashboard");
+    } catch (err: any) {
+      console.error("Login error:", err);
+      const errorMessage =
+        err.message.includes("failed") ? "Unable to connect to server" : err.message;
+      setError(errorMessage);
       toast({
         title: "Login Failed",
-        description: "Invalid credentials. Please try again.",
+        description: errorMessage,
         variant: "destructive",
-      })
+      });
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
+  // Clear error when user types
+  useEffect(() => {
+    if (error) setError("");
+  }, [credentials, userType]);
+
+  // Icons based on user type
   const getUserIcon = (type: string) => {
     switch (type) {
       case "student":
-        return <User className="w-4 h-4" />
+        return <User className="w-4 h-4" />;
       case "teacher":
-        return <GraduationCap className="w-4 h-4" />
+        return <GraduationCap className="w-4 h-4" />;
       case "administrator":
-        return <Shield className="w-4 h-4" />
+        return <Shield className="w-4 h-4" />;
       case "guardian":
-        return <Users className="w-4 h-4" />
+        return <Users className="w-4 h-4" />;
       default:
-        return <User className="w-4 h-4" />
+        return <User className="w-4 h-4" />;
     }
-  }
+  };
 
   return (
     <div className="min-h-screen flex">
-      {/* Left Column - Logo and Branding */}
+      {/* Left Column - Branding */}
       <div className="flex-1 bg-gradient-to-br from-blue-600 to-purple-700 flex items-center justify-center p-8">
         <div className="text-center text-white">
           <div className="mb-8">
@@ -168,13 +208,18 @@ export function LoginPage() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="username">Username / Email</Label>
+                <Label htmlFor="username">Username</Label>
                 <Input
                   id="username"
                   type="text"
-                  placeholder="Enter your username or email"
+                  placeholder="Enter your username"
                   value={credentials.username}
-                  onChange={(e) => setCredentials((prev) => ({ ...prev, username: e.target.value }))}
+                  onChange={(e) =>
+                    setCredentials((prev) => ({
+                      ...prev,
+                      username: e.target.value,
+                    }))
+                  }
                 />
               </div>
 
@@ -185,7 +230,12 @@ export function LoginPage() {
                   type="password"
                   placeholder="Enter your password"
                   value={credentials.password}
-                  onChange={(e) => setCredentials((prev) => ({ ...prev, password: e.target.value }))}
+                  onChange={(e) =>
+                    setCredentials((prev) => ({
+                      ...prev,
+                      password: e.target.value,
+                    }))
+                  }
                 />
               </div>
 
@@ -200,34 +250,43 @@ export function LoginPage() {
             </CardContent>
           </Card>
 
-          {/* Demo Credentials Card */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg">Demo Credentials</CardTitle>
-              <CardDescription>Click to auto-fill login credentials</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 gap-2">
-                {demoCredentials.map((demo, index) => (
-                  <Button
-                    key={index}
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleDemoLogin(demo)}
-                    className="justify-start"
-                  >
-                    {getUserIcon(demo.userType)}
-                    <span className="ml-2">
-                      {demo.label}: {demo.username}
-                    </span>
-                  </Button>
-                ))}
-              </div>
-              <p className="text-xs text-gray-500 mt-4 text-center">All demo passwords: password123</p>
-            </CardContent>
-          </Card>
+          {/* 🔐 Demo Panel - Only in Development */}
+          {isDemoMode && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg">Demo Credentials</CardTitle>
+                <CardDescription>Click to auto-fill (still requires login)</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 gap-2">
+                  {demoCredentials.map((demo, index) => (
+                    <Button
+                      key={index}
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleDemoLogin(demo)}
+                      className="justify-start hover:bg-blue-50 transition-colors"
+                    >
+                      {getUserIcon(demo.userType)}
+                      <span className="ml-2 font-medium">
+                        {demo.label}: <span className="text-gray-600">{demo.username}</span>
+                      </span>
+                    </Button>
+                  ))}
+                </div>
+                <p className="text-xs text-gray-500 mt-4 text-center">
+                  All demo passwords: <strong>password123</strong>
+                </p>
+              </CardContent>
+            </Card>
+          )}
         </div>
       </div>
     </div>
-  )
+  );
+}
+
+// Default export
+export default function Login() {
+  return <LoginPage />;
 }
