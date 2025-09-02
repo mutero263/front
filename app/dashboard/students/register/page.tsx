@@ -1,19 +1,25 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Textarea } from "@/components/ui/textarea"
-import { Calendar } from "@/components/ui/calendar"
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { CalendarIcon, Upload, ArrowLeft, ArrowRight, Check, FileDown } from "lucide-react"
-import { format } from "date-fns"
-import { cn } from "@/lib/utils"
-import { useToast } from "@/hooks/use-toast"
-import { useRouter } from "next/navigation"
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { CalendarIcon, Upload, ArrowLeft, ArrowRight, Check, FileDown, X } from "lucide-react";
+import { format } from "date-fns";
+import { cn } from "@/lib/utils";
+import { useToast } from "@/hooks/use-toast";
+import { useRouter } from "next/navigation";
 
 // PDF Libraries
 import {
@@ -24,16 +30,33 @@ import {
   Image,
   StyleSheet,
   PDFDownloadLink,
-} from '@react-pdf/renderer'
+} from '@react-pdf/renderer';
 
-type FormStep = "personal" | "guardian" | "history" | "documents"
+type FormStep = "personal" | "guardian" | "history" | "documents";
+
+// 🔢 Define available subjects
+const availableSubjects = [
+  "Mathematics",
+  "English",
+  "Kiswahili",
+  "Science",
+  "Social Studies",
+  "CRE",
+  "Art & Design",
+  "Music",
+  "Physical Education",
+  "Computer Studies",
+  "Agriculture",
+  "French",
+];
 
 export default function StudentRegistration() {
-  const [currentStep, setCurrentStep] = useState<FormStep>("personal")
-  const [dateOfBirth, setDateOfBirth] = useState<Date>()
-  const [guardianDOB, setGuardianDOB] = useState<Date>()
-  const { toast } = useToast()
-  const router = useRouter()
+  const [currentStep, setCurrentStep] = useState<FormStep>("personal");
+  const [dateOfBirth, setDateOfBirth] = useState<Date>();
+  const [guardianDOB, setGuardianDOB] = useState<Date>();
+  const [loading, setLoading] = useState(false);
+  const { toast } = useToast();
+  const router = useRouter();
 
   const [formData, setFormData] = useState({
     // Personal Details
@@ -48,7 +71,7 @@ export default function StudentRegistration() {
     country: "",
     gender: "",
     assignedClass: "",
-    profilePicture: "",
+    assignedSubjects: [] as string[],
 
     // Guardian Details
     guardianSurname: "",
@@ -67,7 +90,7 @@ export default function StudentRegistration() {
     previousSchool: "",
     medicalConditions: "",
 
-    // Documents (now store Base64 strings)
+    // Documents
     transferDocuments: "",
     doctorLetter: "",
     birthCertificate: "",
@@ -75,90 +98,143 @@ export default function StudentRegistration() {
     proofOfResidence: "",
     previousResults: "",
     proofOfPayment: "",
-  })
+  });
 
-  const [isSubmitted, setIsSubmitted] = useState(false)
+  const [isSubmitted, setIsSubmitted] = useState(false);
 
   const handleInputChange = (field: string, value: any) => {
-    setFormData((prev) => ({ ...prev, [field]: value }))
-  }
+    setFormData((prev) => ({ ...prev, [field]: value }));
+  };
 
-  // ✅ Convert uploaded file to Base64
   const handleFileUpload = (field: string, files: FileList | null) => {
     if (files && files[0]) {
-      const file = files[0]
-      const reader = new FileReader()
+      const file = files[0];
+      const reader = new FileReader();
 
       reader.onloadend = () => {
-        const base64String = reader.result as string
-        handleInputChange(field, base64String)
-      }
+        const base64String = reader.result as string;
+        handleInputChange(field, base64String);
+      };
 
-      reader.readAsDataURL(file)
+      reader.readAsDataURL(file);
     }
-  }
+  };
 
   const handleProfilePictureUpload = (files: FileList | null) => {
-    handleFileUpload("profilePicture", files)
-  }
+    handleFileUpload("profilePicture", files);
+  };
+
+  const addSubject = (subject: string) => {
+    if (!formData.assignedSubjects.includes(subject)) {
+      setFormData((prev) => ({
+        ...prev,
+        assignedSubjects: [...prev.assignedSubjects, subject],
+      }));
+    }
+  };
+
+  const removeSubject = (subjectToRemove: string) => {
+    setFormData((prev) => ({
+      ...prev,
+      assignedSubjects: prev.assignedSubjects.filter((s) => s !== subjectToRemove),
+    }));
+  };
 
   const handleNext = () => {
-    const steps: FormStep[] = ["personal", "guardian", "history", "documents"]
-    const currentIndex = steps.indexOf(currentStep)
+    const steps: FormStep[] = ["personal", "guardian", "history", "documents"];
+    const currentIndex = steps.indexOf(currentStep);
     if (currentIndex < steps.length - 1) {
-      setCurrentStep(steps[currentIndex + 1])
+      setCurrentStep(steps[currentIndex + 1]);
     }
-  }
+  };
 
   const handleBack = () => {
-    const steps: FormStep[] = ["personal", "guardian", "history", "documents"]
-    const currentIndex = steps.indexOf(currentStep)
+    const steps: FormStep[] = ["personal", "guardian", "history", "documents"];
+    const currentIndex = steps.indexOf(currentStep);
     if (currentIndex > 0) {
-      setCurrentStep(steps[currentIndex - 1])
+      setCurrentStep(steps[currentIndex - 1]);
     }
-  }
+  };
 
-  const handleSaveAndFinish = () => {
-    if (!formData.surname || !formData.firstName || !formData.entryNumber || !formData.gender || !formData.assignedClass) {
+  // ✅ Save to Real API with Token
+  const handleSaveAndFinish = async () => {
+    if (
+      !formData.surname ||
+      !formData.firstName ||
+      !formData.entryNumber ||
+      !formData.gender ||
+      !formData.assignedClass ||
+      !formData.guardianEmail ||
+      !formData.guardianPhone ||
+      !formData.guardianNationalId
+    ) {
       toast({
         title: "Missing Required Fields",
         description: "Please fill in all required fields marked with *",
         variant: "destructive",
-      })
-      return
+      });
+      return;
     }
 
-    const studentData = {
-      id: Date.now().toString(),
-      ...formData,
-      dateOfBirth: dateOfBirth ? format(dateOfBirth, "PPP") : null,
-      guardianDOB: guardianDOB ? format(guardianDOB, "PPP") : null,
-      createdAt: new Date().toISOString(),
-    }
-
-    const stored = localStorage.getItem("students")
-    const students = stored ? JSON.parse(stored) : []
-
-    const exists = students.some((s: any) => s.entryNumber === formData.entryNumber)
-    if (exists) {
+    // ✅ Get token from localStorage
+    const token = localStorage.getItem("token");
+    if (!token) {
       toast({
-        title: "Duplicate Entry Number",
-        description: `A student with Entry Number '${formData.entryNumber}' is already registered.`,
+        title: "Authentication Required",
+        description: "You must be logged in to register a student.",
         variant: "destructive",
-      })
-      return
+      });
+      router.push("/login");
+      return;
     }
 
-    students.push(studentData)
-    localStorage.setItem("students", JSON.stringify(students))
+    setLoading(true);
 
-    toast({
-      title: "Registration Completed Successfully!",
-      description: `${formData.firstName} ${formData.surname} has been registered.`,
-    })
+    try {
+      const payload = {
+        ...formData,
+        dateOfBirth: dateOfBirth ? format(dateOfBirth, "yyyy-MM-dd") : null,
+        guardianDOB: guardianDOB ? format(guardianDOB, "yyyy-MM-dd") : null,
+      };
 
-    setIsSubmitted(true)
-  }
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/students/register`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${token}`, // ✅ Send token
+          },
+          body: JSON.stringify(payload),
+        }
+      );
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || "Failed to register student");
+      }
+
+      toast({
+        title: "Registration Successful!",
+        description: `${formData.firstName} ${formData.surname} has been registered.`,
+      });
+
+      setIsSubmitted(true);
+    } catch (err: any) {
+      console.error("Registration error:", err);
+      toast({
+        title: "Registration Failed",
+        description:
+          err.message.includes("token") || err.message.includes("Authentication")
+            ? "Session expired. Please log in again."
+            : err.message || "Could not save student data.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // --- PDF Document Component ---
   const StudentRegistrationPDF = () => (
@@ -173,14 +249,8 @@ export default function StudentRegistration() {
         {/* Student Info */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Student Information</Text>
-          
-          {/* Profile Picture in PDF */}
-          {formData.profilePicture && (
-            <View style={styles.profilePicContainer}>
-              <Image src={formData.profilePicture} style={styles.profilePicPDF} />
-            </View>
-          )}
-          
+
+
           <View style={styles.row}>
             <Text style={styles.label}>Full Name:</Text>
             <Text>{formData.firstName} {formData.middleName} {formData.surname}</Text>
@@ -200,6 +270,10 @@ export default function StudentRegistration() {
           <View style={styles.row}>
             <Text style={styles.label}>Class:</Text>
             <Text>{formData.assignedClass.replace("grade", "Grade ")}</Text>
+          </View>
+          <View style={styles.row}>
+            <Text style={styles.label}>Subjects:</Text>
+            <Text>{formData.assignedSubjects.length > 0 ? formData.assignedSubjects.join(", ") : "None"}</Text>
           </View>
           <View style={styles.row}>
             <Text style={styles.label}>Email:</Text>
@@ -265,7 +339,6 @@ export default function StudentRegistration() {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Supporting Documents</Text>
 
-          {/* Proof of Payment */}
           {formData.proofOfPayment && (
             <View style={styles.docItem}>
               <Text style={styles.docLabel}>Proof of Payment:</Text>
@@ -273,7 +346,6 @@ export default function StudentRegistration() {
             </View>
           )}
 
-          {/* Birth Certificate */}
           {formData.birthCertificate && (
             <View style={styles.docItem}>
               <Text style={styles.docLabel}>Birth Certificate:</Text>
@@ -281,7 +353,6 @@ export default function StudentRegistration() {
             </View>
           )}
 
-          {/* Guardian ID */}
           {formData.guardianId && (
             <View style={styles.docItem}>
               <Text style={styles.docLabel}>Guardian ID:</Text>
@@ -289,7 +360,6 @@ export default function StudentRegistration() {
             </View>
           )}
 
-          {/* Proof of Residence */}
           {formData.proofOfResidence && (
             <View style={styles.docItem}>
               <Text style={styles.docLabel}>Proof of Residence:</Text>
@@ -305,7 +375,7 @@ export default function StudentRegistration() {
         </View>
       </Page>
     </Document>
-  )
+  );
 
   // --- PDF Styles ---
   const styles = StyleSheet.create({
@@ -384,7 +454,7 @@ export default function StudentRegistration() {
     footerText: {
       marginBottom: 4,
     },
-  })
+  });
 
   // --- Render Functions ---
   const renderPersonalDetails = () => (
@@ -394,48 +464,7 @@ export default function StudentRegistration() {
         <CardDescription>Enter the student's personal information</CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
-        {/* Profile Picture Upload Section */}
-        <div className="flex flex-col items-center space-y-4 pb-6 border-b">
-          <div className="relative">
-            <div 
-              className={cn(
-                "w-40 h-40 rounded-full overflow-hidden border-4 border-gray-200 flex items-center justify-center bg-gray-100",
-                formData.profilePicture && "border-blue-500"
-              )}
-            >
-              {formData.profilePicture ? (
-                <img 
-                  src={formData.profilePicture} 
-                  alt="Profile" 
-                  className="w-full h-full object-cover"
-                />
-              ) : (
-                <span className="text-gray-400 text-6xl">👤</span>
-              )}
-            </div>
-            <div className="absolute -bottom-2 -right-2">
-              <Input
-                id="profilePicture"
-                type="file"
-                accept="image/*"
-                onChange={(e) => handleProfilePictureUpload(e.target.files)}
-                className="hidden"
-              />
-              <Button
-                type="button"
-                size="icon"
-                className="rounded-full w-10 h-10"
-                onClick={() => document.getElementById('profilePicture')?.click()}
-              >
-                <Upload className="w-4 h-4" />
-              </Button>
-            </div>
-          </div>
-          <p className="text-sm text-muted-foreground text-center max-w-xs">
-            Upload a clear photo of the student. JPG, PNG or GIF. Max size 5MB.
-          </p>
-        </div>
-
+        {/* Name Fields */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className="space-y-2">
             <Label htmlFor="surname">Surname *</Label>
@@ -451,6 +480,7 @@ export default function StudentRegistration() {
           </div>
         </div>
 
+        {/* Contact & Entry */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className="space-y-2">
             <Label htmlFor="email">Email</Label>
@@ -466,6 +496,7 @@ export default function StudentRegistration() {
           </div>
         </div>
 
+        {/* Address */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="space-y-2">
             <Label htmlFor="address">Address</Label>
@@ -483,6 +514,7 @@ export default function StudentRegistration() {
           </div>
         </div>
 
+        {/* DOB & Gender */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="space-y-2">
             <Label>Date of Birth *</Label>
@@ -511,6 +543,7 @@ export default function StudentRegistration() {
           </div>
         </div>
 
+        {/* Class & Subjects */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="space-y-2">
             <Label htmlFor="assignedClass">Assign Class *</Label>
@@ -532,10 +565,47 @@ export default function StudentRegistration() {
               </SelectContent>
             </Select>
           </div>
+
+          <div className="space-y-2">
+            <Label>Assigned Subjects</Label>
+            <Select onValueChange={addSubject}>
+              <SelectTrigger>
+                <SelectValue placeholder="Add Subject" />
+              </SelectTrigger>
+              <SelectContent>
+                {availableSubjects
+                  .filter((subj) => !formData.assignedSubjects.includes(subj))
+                  .map((subject) => (
+                    <SelectItem key={subject} value={subject}>
+                      {subject}
+                    </SelectItem>
+                  ))}
+              </SelectContent>
+            </Select>
+
+            {/* Selected Subjects Pills */}
+            <div className="flex flex-wrap gap-2 mt-2">
+              {formData.assignedSubjects.map((subject) => (
+                <div
+                  key={subject}
+                  className="flex items-center gap-1 bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-sm"
+                >
+                  {subject}
+                  <button
+                    type="button"
+                    onClick={() => removeSubject(subject)}
+                    className="ml-1 text-blue-600 hover:text-blue-800"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
       </CardContent>
     </Card>
-  )
+  );
 
   const renderGuardianDetails = () => (
     <Card>
@@ -637,7 +707,7 @@ export default function StudentRegistration() {
         </div>
       </CardContent>
     </Card>
-  )
+  );
 
   const renderStudentHistory = () => (
     <Card>
@@ -657,7 +727,7 @@ export default function StudentRegistration() {
         </div>
       </CardContent>
     </Card>
-  )
+  );
 
   const renderDocumentUpload = () => (
     <Card>
@@ -692,11 +762,7 @@ export default function StudentRegistration() {
                 Choose File
               </Button>
               {formData[doc.field as keyof typeof formData] && (
-                <span className="text-sm text-muted-foreground">
-                  {formData[doc.field as keyof typeof formData].startsWith("data:") 
-                    ? `Uploaded: ${doc.label.split(" *")[0]}` 
-                    : formData[doc.field as keyof typeof formData]}
-                </span>
+                <span className="text-sm text-muted-foreground">Uploaded</span>
               )}
             </div>
             <p className="text-xs text-muted-foreground">Accepted formats: PDF, PNG, JPEG</p>
@@ -704,27 +770,27 @@ export default function StudentRegistration() {
         ))}
       </CardContent>
     </Card>
-  )
+  );
 
   const renderCurrentStep = () => {
     switch (currentStep) {
-      case "personal": return renderPersonalDetails()
-      case "guardian": return renderGuardianDetails()
-      case "history": return renderStudentHistory()
-      case "documents": return renderDocumentUpload()
-      default: return renderPersonalDetails()
+      case "personal": return renderPersonalDetails();
+      case "guardian": return renderGuardianDetails();
+      case "history": return renderStudentHistory();
+      case "documents": return renderDocumentUpload();
+      default: return renderPersonalDetails();
     }
-  }
+  };
 
   const steps = [
     { key: "personal", title: "Personal Details" },
     { key: "guardian", title: "Guardian Details" },
     { key: "history", title: "Student History" },
     { key: "documents", title: "Documents" },
-  ]
+  ];
 
   return (
-    <div className="space-y-6 max-w-4xl mx-auto">
+    <div className="space-y-6 max-w-4xl mx-auto p-6">
       <div>
         <h2 className="text-3xl font-bold tracking-tight">Student Registration</h2>
         <p className="text-muted-foreground">Register a new student in the system</p>
@@ -782,14 +848,14 @@ export default function StudentRegistration() {
           {renderCurrentStep()}
 
           {/* Navigation */}
-          <div className="flex justify-between">
+          <div className="flex justify-between pt-6">
             <Button variant="outline" onClick={handleBack} disabled={currentStep === "personal"}>
               <ArrowLeft className="w-4 h-4 mr-2" /> Back
             </Button>
             <div className="space-x-2">
               {currentStep === "documents" ? (
-                <Button onClick={handleSaveAndFinish}>
-                  <Check className="w-4 h-4 mr-2" /> Save and Finish
+                <Button onClick={handleSaveAndFinish} disabled={loading}>
+                  {loading ? "Saving..." : <>Save and Finish <Check className="w-4 h-4 ml-2" /></>}
                 </Button>
               ) : (
                 <Button onClick={handleNext}>
@@ -801,5 +867,5 @@ export default function StudentRegistration() {
         </>
       )}
     </div>
-  )
+  );
 }
