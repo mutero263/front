@@ -49,7 +49,7 @@ export function LoginPage() {
 
   // 🛠 Get API URL with fallback (critical fix)
   const API_BASE_URL =
-    process.env.NEXT_PUBLIC_API_BASE_URL || "https://99625203ee61.ngrok-free.app";
+    process.env.NEXT_PUBLIC_API_BASE_URL || "https://589f537ce690.ngrok-free.app";
 
   // Auto-fill demo credentials (does NOT auto-login)
   const handleDemoLogin = (demo: (typeof demoCredentials)[0]) => {
