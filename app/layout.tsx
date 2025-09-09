@@ -10,7 +10,6 @@ const inter = Inter({ subsets: ["latin"] })
 export const metadata: Metadata = {
   title: "Transcendence School Management System",
   description: "Comprehensive school management solution",
-    generator: 'v0.dev'
 }
 
 export default function RootLayout({
