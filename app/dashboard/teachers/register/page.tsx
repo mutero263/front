@@ -1,19 +1,43 @@
-"use client"
+"use client";
 
-import type React from "react"
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
+import { useToast } from "@/hooks/use-toast";
 
-import { useState } from "react"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Textarea } from "@/components/ui/textarea"
-import { Checkbox } from "@/components/ui/checkbox"
-import { useToast } from "@/hooks/use-toast"
-import { teacherAPI } from "@/lib/api"
+// 🔧 API call wrapper (ensure this exists in your lib/api.ts)
+const api = {
+  post: async (endpoint: string, data: any) => {
+    const token = localStorage.getItem("token");
+    const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}${endpoint}`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${token}`,
+      },
+      body: JSON.stringify(data),
+    });
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({}));
+      throw new Error(error.message || "Request failed");
+    }
+
+    return await response.json();
+  },
+};
+
+//  Teacher API
+const teacherAPI = {
+  register: (data: any) => api.post("/api/teachers/register", data),
+};
 
 export default function TeacherRegistration() {
-  const { toast } = useToast()
+  const { toast } = useToast();
   const [formData, setFormData] = useState({
     fullName: "",
     email: "",
@@ -23,9 +47,9 @@ export default function TeacherRegistration() {
     areaOfExpertise: "",
     assignedClasses: [] as string[],
     assignedSubjects: [] as string[],
-  })
+  });
 
-  const [loading, setLoading] = useState(false)
+  const [loading, setLoading] = useState(false);
 
   const classes = [
     "Grade 1",
@@ -40,7 +64,7 @@ export default function TeacherRegistration() {
     "Grade 10",
     "Grade 11",
     "Grade 12",
-  ]
+  ];
 
   const subjects = [
     "Mathematics",
@@ -57,11 +81,11 @@ export default function TeacherRegistration() {
     "Physical Education",
     "French",
     "Spanish",
-  ]
+  ];
 
   const handleInputChange = (field: string, value: any) => {
-    setFormData((prev) => ({ ...prev, [field]: value }))
-  }
+    setFormData((prev) => ({ ...prev, [field]: value }));
+  };
 
   const handleClassChange = (className: string, checked: boolean) => {
     setFormData((prev) => ({
@@ -69,8 +93,8 @@ export default function TeacherRegistration() {
       assignedClasses: checked
         ? [...prev.assignedClasses, className]
         : prev.assignedClasses.filter((c) => c !== className),
-    }))
-  }
+    }));
+  };
 
   const handleSubjectChange = (subject: string, checked: boolean) => {
     setFormData((prev) => ({
@@ -78,19 +102,32 @@ export default function TeacherRegistration() {
       assignedSubjects: checked
         ? [...prev.assignedSubjects, subject]
         : prev.assignedSubjects.filter((s) => s !== subject),
-    }))
-  }
+    }));
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setLoading(true)
+    e.preventDefault();
+    setLoading(true);
 
     try {
-      await teacherAPI.register(formData)
+      // ✅ Transform frontend format to backend enum style
+      const payload = {
+        ...formData,
+        assignedClasses: formData.assignedClasses.map(cls => 
+          cls.replace(/\s+/g, "").toUpperCase() // "Grade 1" → "GRADE1"
+        ),
+        assignedSubjects: formData.assignedSubjects.map(subj =>
+          subj.replace(/\s+/g, "").toUpperCase() // "Computer Science" → "COMPUTERSCIENCE"
+        ),
+      };
+
+      await teacherAPI.register(payload);
+
       toast({
         title: "Success!",
         description: "Teacher registered successfully.",
-      })
+      });
+
       // Reset form
       setFormData({
         fullName: "",
@@ -101,20 +138,21 @@ export default function TeacherRegistration() {
         areaOfExpertise: "",
         assignedClasses: [],
         assignedSubjects: [],
-      })
+      });
     } catch (error: any) {
+      console.error("Registration error:", error);
       toast({
-        title: "Error",
-        description: error.response?.data?.message || "Failed to register teacher.",
+        title: "Registration Failed",
+        description: error.message || "Could not register teacher. Check network or try again.",
         variant: "destructive",
-      })
+      });
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 max-w-4xl mx-auto p-6">
       <div>
         <h2 className="text-3xl font-bold tracking-tight">Teacher Registration</h2>
         <p className="text-muted-foreground">Register a new teacher in the system</p>
@@ -205,7 +243,7 @@ export default function TeacherRegistration() {
                     <Checkbox
                       id={`class-${className}`}
                       checked={formData.assignedClasses.includes(className)}
-                      onCheckedChange={(checked) => handleClassChange(className, checked as boolean)}
+                      onCheckedChange={(checked) => handleClassChange(className, !!checked)}
                     />
                     <Label htmlFor={`class-${className}`} className="text-sm">
                       {className}
@@ -224,7 +262,7 @@ export default function TeacherRegistration() {
                     <Checkbox
                       id={`subject-${subject}`}
                       checked={formData.assignedSubjects.includes(subject)}
-                      onCheckedChange={(checked) => handleSubjectChange(subject, checked as boolean)}
+                      onCheckedChange={(checked) => handleSubjectChange(subject, !!checked)}
                     />
                     <Label htmlFor={`subject-${subject}`} className="text-sm">
                       {subject}
@@ -234,8 +272,8 @@ export default function TeacherRegistration() {
               </div>
             </div>
 
-            <div className="flex justify-end space-x-2">
-              <Button type="button" variant="outline">
+            <div className="flex justify-end space-x-2 pt-6">
+              <Button type="button" variant="outline" onClick={() => window.history.back()}>
                 Cancel
               </Button>
               <Button type="submit" disabled={loading}>
@@ -246,5 +284,5 @@ export default function TeacherRegistration() {
         </Card>
       </form>
     </div>
-  )
+  );
 }
