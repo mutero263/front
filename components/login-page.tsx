@@ -35,28 +35,14 @@ export function LoginPage() {
   const router = useRouter();
   const { toast } = useToast();
 
-  // 🔐 Demo credentials (for auto-fill only in dev mode)
-  const demoCredentials = [
-    { username: "admin", password: "password123", userType: "administrator", label: "Administrator" },
-    { username: "accountant", password: "password123", userType: "administrator", label: "Accountant" },
-    { username: "teacher1", password: "password123", userType: "teacher", label: "Teacher" },
-    { username: "student1", password: "password123", userType: "STUDENT", label: "Student" },
-    { username: "parent1", password: "password123", userType: "guardian", label: "Parent" },
-  ];
 
   // 🌐 Check environment: show demo panel only in dev
   const isDemoMode = process.env.NEXT_PUBLIC_APP_ENV !== "production";
 
   // 🛠 Get API URL with fallback (critical fix)
   const API_BASE_URL =
-    process.env.NEXT_PUBLIC_API_BASE_URL || "https://589f537ce690.ngrok-free.app";
+    process.env.NEXT_PUBLIC_API_BASE_URL || "https://1b642d6239a8.ngrok-free.app";
 
-  // Auto-fill demo credentials (does NOT auto-login)
-  const handleDemoLogin = (demo: (typeof demoCredentials)[0]) => {
-    setCredentials({ username: demo.username, password: demo.password });
-    setUserType(demo.userType);
-    setError("");
-  };
 
   // 🔑 Real login: sends data to your backend
   const handleLogin = async () => {
@@ -249,43 +235,11 @@ export function LoginPage() {
               </Button>
             </CardContent>
           </Card>
-
-          {/* 🔐 Demo Panel - Only in Development */}
-          {isDemoMode && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg">Demo Credentials</CardTitle>
-                <CardDescription>Click to auto-fill (still requires login)</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 gap-2">
-                  {demoCredentials.map((demo, index) => (
-                    <Button
-                      key={index}
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleDemoLogin(demo)}
-                      className="justify-start hover:bg-blue-50 transition-colors"
-                    >
-                      {getUserIcon(demo.userType)}
-                      <span className="ml-2 font-medium">
-                        {demo.label}: <span className="text-gray-600">{demo.username}</span>
-                      </span>
-                    </Button>
-                  ))}
-                </div>
-                <p className="text-xs text-gray-500 mt-4 text-center">
-                  All demo passwords: <strong>password123</strong>
-                </p>
-              </CardContent>
-            </Card>
-          )}
         </div>
       </div>
     </div>
   );
 }
-
 // Default export
 export default function Login() {
   return <LoginPage />;
