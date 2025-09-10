@@ -67,6 +67,7 @@ export default function StudentProfilePage() {
       try {
         // ✅ Get entryNumber from localStorage (saved at login)
         const username = localStorage.getItem("username");
+        console.log("Logged in as:", username);
         if (!username) {
           toast({
             title: "Not Logged In",
@@ -84,9 +85,10 @@ export default function StudentProfilePage() {
         }
 
         // ✅ Fetch student by entryNumber
-        const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/students/entry-number/${username}`, {
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/students/entry-number/${username}`, {
           method: "GET",
           headers: {
+            "ngrok-skip-browser-warning": "true",            
             "Content-Type": "application/json",
             "Authorization": `Bearer ${token}`,
           },
@@ -150,20 +152,12 @@ export default function StudentProfilePage() {
       <div className="container mx-auto py-8 text-center">
         <h2 className="text-2xl font-bold text-red-600">Profile Not Found</h2>
         <p className="text-gray-500">No data found for your account.</p>
-        <Button asChild className="mt-4" variant="outline">
-          <a href="/login">← Log In Again</a>
-        </Button>
       </div>
     );
   }
 
   return (
     <div className="container mx-auto py-8 px-4 max-w-4xl">
-      {/* Back to Dashboard */}
-      <Button variant="ghost" className="mb-6" onClick={() => router.back()}>
-        ← Back
-      </Button>
-
       {/* Header */}
       <div className="flex items-center gap-6 mb-8">
         <div className="relative">
