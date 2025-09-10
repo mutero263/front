@@ -8,7 +8,7 @@ import { Toaster } from "@/components/ui/toaster"
 const inter = Inter({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
-  title: "Transcendence School Management System",
+  title: "Transcendence School Management",
   description: "Comprehensive school management solution",
 }
 
